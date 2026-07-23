@@ -1,0 +1,19 @@
+@import url("../styles.css");
+
+.table-wrap {
+  max-height: 500px;
+}
+
+.panel.span-2 table {
+  min-width: 900px;
+}
+
+.stock-low {
+  color: #b42318;
+  font-weight: 800;
+}
+
+.stock-high {
+  color: #087443;
+  font-weight: 800;
+}

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#17324d" />
+  <title>Reporte Share Ventas Moviles</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css?v=202607220001" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-title">Share Moviles</div>
+        <div class="brand-subtitle">Bases 2024-2026</div>
+        <div class="report-links" aria-label="Reportes"><a class="is-active" href="./">Móviles</a><a href="accesorios/">Accesorios</a></div>
+      </div>
+      <div class="filter-stack">
+        <label><span>Año</span><select id="filter-year" multiple size="3"></select></label>
+        <label><span>Mes</span><select id="filter-month" multiple size="6"></select></label>
+        <label><span>Semana</span><select id="filter-week" multiple size="5"></select></label>
+        <label><span>Día</span><select id="filter-day" multiple size="5"></select></label>
+        <label><span>Día de semana</span><select id="filter-weekday" multiple size="5"></select></label>
+        <label><span>Canal</span><select id="filter-channel" multiple size="4"></select></label>
+        <label><span>Regional Honor</span><select id="filter-regional" multiple size="4"></select></label>
+        <label><span>Supervisor Honor</span><select id="filter-supervisor" multiple size="4"></select></label>
+        <label><span>Punto de venta</span><select id="filter-pdv" multiple size="5"></select></label>
+        <label><span>Segmento Honor</span><select id="filter-segment" multiple size="4"></select></label>
+        <label><span>Marca</span><select id="filter-brand" multiple size="4"></select></label>
+        <label><span>Modelo</span><select id="filter-model" multiple size="6"></select></label>
+      </div>
+      <button id="reset-filters" class="reset-button" type="button">Reset</button>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div><h1>Reporte interactivo</h1><p id="source-label"></p></div>
+        <nav class="tabs" aria-label="Vistas">
+          <button class="tab is-active" type="button" data-view="mensual">Mes a Mes</button>
+          <button class="tab" type="button" data-view="avances">Avances</button>
+          <button class="tab" type="button" data-view="tiendas">Entel Store - Super</button>
+          <button class="tab" type="button" data-view="precio">Precio vs Venta</button>
+          <button class="tab" type="button" data-view="historico">Histórico Precios</button>
+          <button class="tab" type="button" data-view="stock">Stock</button>
+          <button class="tab" type="button" data-view="wos">WOS</button>
+          <button class="tab" type="button" data-view="insights">Insights</button>
+        </nav>
+      </header>
+      <section class="kpi-strip" aria-label="Indicadores"><div><span>Ventas</span><strong id="kpi-sales">0</strong></div><div><span>Share del total</span><strong id="kpi-share">0.0%</strong></div><div><span>Top marca</span><strong id="kpi-brand">-</strong></div><div><span>PDV</span><strong id="kpi-pdv">0</strong></div></section>
+
+      <section id="view-mensual" class="view is-active"><div class="grid two-col">
+        <section class="panel"><div class="panel-head"><h2>Avance B2C - MxM</h2></div><div class="table-wrap"><table id="table-monthly-brand"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Avance B2C - DxD</h2></div><div class="table-wrap wide"><table id="table-monthly-brand-day"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Avance Segmento - MxM</h2></div><div class="table-wrap"><table id="table-monthly-segment"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Avance Modelo - MxM</h2><span class="hint">Segmento Honor</span></div><div class="table-wrap wide"><table id="table-monthly-model"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Punto de venta / Marca - MxM</h2></div><div class="table-wrap wide"><table id="table-monthly-pdv-brand"></table></div></section>
+      </div></section>
+
+      <section id="view-avances" class="view"><div class="grid two-col">
+        <section class="panel"><div class="panel-head"><h2>Avance B2C - WxW</h2></div><div class="table-wrap"><table id="table-brand-week"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Avance B2C - DxD</h2></div><div class="table-wrap wide"><table id="table-brand-day"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Avance Segmento - WxW</h2></div><div class="table-wrap"><table id="table-segment-week"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Avance por modelo WxW</h2></div><div class="table-wrap wide"><table id="table-model-week"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Avance Segmento - DxD</h2><span id="model-count" class="hint"></span></div><div class="table-wrap wide"><table id="table-model-day"></table></div></section>
+      </div></section>
+
+      <section id="view-tiendas" class="view"><div class="grid store-grid">
+        <section class="panel"><div class="panel-head"><h2>Regional / Segmento Honor</h2></div><div class="table-wrap"><table id="table-regional-segment"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Regional / Marca</h2></div><div class="table-wrap"><table id="table-regional-brand"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Tienda / Modelo</h2></div><div class="table-wrap"><table id="table-store-model"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Tienda / Marca</h2></div><div class="table-wrap"><table id="table-store-brand"></table></div></section>
+      </div></section>
+
+      <section id="view-precio" class="view"><div class="grid price-grid">
+        <section class="panel span-3"><div class="panel-head"><h2>Cambios de precio por Segmento Honor</h2></div><div class="table-wrap"><table id="table-price-change-segment"></table></div></section>
+        <section class="panel span-3"><div class="panel-head"><h2>Detalle cambios de precio</h2></div><div class="table-wrap wide"><table id="table-price-change-detail"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Correlacion por canal</h2></div><div class="table-wrap"><table id="table-price-channel"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Correlacion por regional</h2></div><div class="table-wrap"><table id="table-price-regional"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Correlacion por segmento</h2></div><div class="table-wrap"><table id="table-price-segment"></table></div></section>
+        <section class="panel span-3"><div class="panel-head"><h2>Detalle Canal / Marca / Modelo</h2></div><div class="table-wrap wide"><table id="table-price-channel-model"></table></div></section>
+        <section class="panel span-3"><div class="panel-head"><h2>Detalle PDV / Marca / Modelo</h2></div><div class="table-wrap wide"><table id="table-price-pdv-model"></table></div></section>
+      </div></section>
+
+      <section id="view-historico" class="view"><div class="grid price-grid"><section class="panel span-3"><div class="panel-head"><h2>Top 5 modelos por Segmento Honor - Histórico de precios</h2><span id="price-history-scope" class="hint"></span></div><div class="table-wrap wide"><table id="table-price-history"></table></div></section></div></section>
+
+      <section id="view-stock" class="view"><div class="grid two-col">
+        <section class="panel"><div class="panel-head"><h2>Stock por Segmento Honor</h2></div><div class="table-wrap"><table id="table-stock-segment"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Stock por canal</h2></div><div class="table-wrap"><table id="table-stock-channel"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Stock por canal / modelo</h2></div><div class="table-wrap wide"><table id="table-stock-channel-model"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Stock por marca</h2></div><div class="table-wrap"><table id="table-stock-brand"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Stock, venta y cobertura por modelo</h2></div><div class="table-wrap wide"><table id="table-stock-model"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Stock por punto de venta</h2></div><div class="table-wrap wide"><table id="table-stock-pdv"></table></div></section>
+      </div></section>
+
+      <section id="view-wos" class="view"><div class="grid two-col">
+        <section class="panel span-2"><div class="panel-head"><h2>Venta, Stock y WOS por modelo y PDV</h2><span id="wos-main-scope" class="hint"></span><span id="wos-main-pager" class="table-pager"></span></div><div class="table-wrap wide"><table id="table-wos-main"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Alertas de stock</h2><span id="wos-stock-scope" class="hint"></span><span id="wos-stock-pager" class="table-pager"></span></div><div class="table-wrap wide"><table id="table-wos-stock-alert"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Alerta de venta</h2><span id="wos-sales-scope" class="hint"></span><span id="wos-sales-pager" class="table-pager"></span></div><div class="table-wrap wide"><table id="table-wos-sales-alert"></table></div></section>
+      </div></section>
+
+      <section id="view-insights" class="view"><div class="grid insight-grid">
+        <section class="panel span-3"><div class="panel-head"><h2>Insights del mes</h2><span id="insight-scope" class="hint"></span></div><div class="table-wrap wide"><table id="table-insight-actions"></table></div></section>
+        <section class="panel span-3"><div class="panel-head"><h2>Bajas de precio con stock actual</h2></div><div class="table-wrap wide"><table id="table-insight-price-stock"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Movimiento ventas por marca</h2></div><div class="table-wrap"><table id="table-insight-brand-sales"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Movimiento ventas por canal</h2></div><div class="table-wrap"><table id="table-insight-channel-sales"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Movimiento ventas por Segmento Honor</h2></div><div class="table-wrap"><table id="table-insight-segment-sales"></table></div></section>
+        <section class="panel span-3"><div class="panel-head"><h2>Movimiento ventas por punto de venta</h2><div class="inline-filters"><label><span>Regional</span><select id="filter-insight-pdv-regional" multiple size="3"></select></label><label><span>Punto de venta</span><select id="filter-insight-pdv" multiple size="3"></select></label></div></div><div class="table-wrap wide"><table id="table-insight-pdv-sales"></table></div></section>
+        <section class="panel span-3"><div class="panel-head"><h2>Movimiento ventas por modelo</h2></div><div class="table-wrap wide"><table id="table-insight-model-sales"></table></div></section>
+        <section class="panel span-3"><div class="panel-head"><h2>Caida share Honor por punto de venta</h2></div><div class="table-wrap wide"><table id="table-insight-pdv-share"></table></div></section>
+        <section class="panel span-3"><div class="panel-head"><h2>Movimiento por Segmento Honor</h2></div><div class="table-wrap"><table id="table-insight-segment-share"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Stock Honor por PDV</h2></div><div class="table-wrap"><table id="table-insight-honor-stock"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Stock por modelo</h2></div><div class="table-wrap wide"><table id="table-insight-model-stock"></table></div></section>
+      </div></section>
+    </main>
+  </div>
+    <script src="data_core_compressed.js?v=202607220001"></script>
+    <script src="data_rows_2026.js?v=202607220001"></script>
+    <script src="loader.js?v=202607220001"></script>
+</body>
+</html>

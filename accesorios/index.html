@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#17324d" />
+  <title>Reporte Accesorios Entel</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css?v=202607220001" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-title">Share Accesorios</div>
+        <div class="brand-subtitle">Accesorios, tablets y wearables</div>
+        <div class="report-links" aria-label="Reportes"><a href="../">Móviles</a><a class="is-active" href="./">Accesorios</a></div>
+      </div>
+      <div class="filter-stack">
+        <label><span>Año</span><select id="filter-year" multiple size="3"></select></label>
+        <label><span>Mes</span><select id="filter-month" multiple size="6"></select></label>
+        <label><span>Semana</span><select id="filter-week" multiple size="5"></select></label>
+        <label><span>Día</span><select id="filter-day" multiple size="5"></select></label>
+        <label><span>Día de semana</span><select id="filter-weekday" multiple size="5"></select></label>
+        <label><span>Canal</span><select id="filter-channel" multiple size="4"></select></label>
+        <label><span>Regional Honor</span><select id="filter-regional" multiple size="4"></select></label>
+        <label><span>Supervisor Honor</span><select id="filter-supervisor" multiple size="4"></select></label>
+        <label><span>Punto de venta</span><select id="filter-pdv" multiple size="5"></select></label>
+        <label><span>Tipo</span><select id="filter-type" multiple size="5"></select></label>
+        <label><span>Subtipo</span><select id="filter-subtype" multiple size="6"></select></label>
+        <label><span>Marca</span><select id="filter-brand" multiple size="4"></select></label>
+        <label><span>Modelo</span><select id="filter-model" multiple size="6"></select></label>
+      </div>
+      <button id="reset-filters" class="reset-button" type="button">Reset</button>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div><h1>Reporte interactivo de Accesorios</h1><p id="source-label"></p></div>
+        <nav class="tabs" aria-label="Vistas">
+          <button class="tab is-active" type="button" data-view="mensual">Mes a Mes</button>
+          <button class="tab" type="button" data-view="avances">Avances</button>
+          <button class="tab" type="button" data-view="tiendas">Entel Store - Super</button>
+          <button class="tab" type="button" data-view="historico">Histórico Precios</button>
+          <button class="tab" type="button" data-view="stock">Stock</button>
+          <button class="tab" type="button" data-view="wos">WOS</button>
+        </nav>
+      </header>
+      <section class="kpi-strip" aria-label="Indicadores"><div><span>Ventas</span><strong id="kpi-sales">0</strong></div><div><span>Share seleccionado</span><strong id="kpi-share">0.0%</strong></div><div><span>Top marca</span><strong id="kpi-brand">-</strong></div><div><span>Stock actual</span><strong id="kpi-stock">0</strong></div></section>
+
+      <section id="view-mensual" class="view is-active"><div class="grid two-col">
+        <section class="panel"><div class="panel-head"><h2>Venta por marca - MxM</h2></div><div class="table-wrap"><table id="table-month-brand"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Venta por Tipo / Subtipo - MxM</h2></div><div class="table-wrap"><table id="table-month-subtype"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Venta por modelo - MxM</h2></div><div class="table-wrap wide"><table id="table-month-model"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Punto de venta / Marca - MxM</h2></div><div class="table-wrap wide"><table id="table-month-pdv-brand"></table></div></section>
+      </div></section>
+
+      <section id="view-avances" class="view"><div class="grid two-col">
+        <section class="panel"><div class="panel-head"><h2>Avance por marca - WxW</h2></div><div class="table-wrap"><table id="table-week-brand"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Avance por Tipo / Subtipo - WxW</h2></div><div class="table-wrap"><table id="table-week-subtype"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Avance por modelo - WxW</h2></div><div class="table-wrap wide"><table id="table-week-model"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Venta diaria por marca</h2></div><div class="table-wrap wide"><table id="table-day-brand"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Venta diaria por modelo</h2></div><div class="table-wrap wide"><table id="table-day-model"></table></div></section>
+      </div></section>
+
+      <section id="view-tiendas" class="view"><div class="grid store-grid">
+        <section class="panel"><div class="panel-head"><h2>Regional / Tipo / Subtipo</h2></div><div class="table-wrap"><table id="table-regional-subtype"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Regional / Marca</h2></div><div class="table-wrap"><table id="table-regional-brand"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Tienda / Modelo</h2></div><div class="table-wrap wide"><table id="table-store-model"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Tienda / Marca</h2></div><div class="table-wrap"><table id="table-store-brand"></table></div></section>
+      </div></section>
+
+      <section id="view-historico" class="view"><div class="grid two-col"><section class="panel span-2"><div class="panel-head"><h2>Top 5 modelos por Tipo / Subtipo - Histórico de precios</h2><span id="price-history-scope" class="hint"></span></div><div class="table-wrap wide"><table id="table-price-history"></table></div></section></div></section>
+
+      <section id="view-stock" class="view"><div class="grid two-col">
+        <section class="panel"><div class="panel-head"><h2>Stock por marca</h2></div><div class="table-wrap"><table id="table-stock-brand"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Stock por canal</h2></div><div class="table-wrap"><table id="table-stock-channel"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Stock por canal / modelo</h2></div><div class="table-wrap wide"><table id="table-stock-channel-model"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Stock, venta y cobertura por modelo</h2></div><div class="table-wrap wide"><table id="table-stock-model"></table></div></section>
+        <section class="panel span-2"><div class="panel-head"><h2>Stock por punto de venta</h2></div><div class="table-wrap wide"><table id="table-stock-pdv"></table></div></section>
+      </div></section>
+
+      <section id="view-wos" class="view"><div class="grid two-col">
+        <section class="panel span-2"><div class="panel-head"><h2>Venta, Stock y WOS por modelo y PDV</h2><span id="wos-main-scope" class="hint"></span><span id="wos-main-pager" class="table-pager"></span></div><div class="table-wrap wide"><table id="table-wos-main"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Alertas de stock</h2><span id="wos-stock-scope" class="hint"></span><span id="wos-stock-pager" class="table-pager"></span></div><div class="table-wrap wide"><table id="table-wos-stock-alert"></table></div></section>
+        <section class="panel"><div class="panel-head"><h2>Alerta de venta</h2><span id="wos-sales-scope" class="hint"></span><span id="wos-sales-pager" class="table-pager"></span></div><div class="table-wrap wide"><table id="table-wos-sales-alert"></table></div></section>
+      </div></section>
+    </main>
+  </div>
+    <script src="data_core_compressed.js?v=202607220001"></script>
+    <script src="data_rows_2026.js?v=202607220001"></script>
+    <script src="loader.js?v=202607220001"></script>
+</body>
+</html>

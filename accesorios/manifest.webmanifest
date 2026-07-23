@@ -1,0 +1,9 @@
+{
+  "name": "Reporte Accesorios Entel",
+  "short_name": "Accesorios",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#edf2f7",
+  "theme_color": "#17324d",
+  "lang": "es"
+}

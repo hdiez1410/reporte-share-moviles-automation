@@ -1,0 +1,8 @@
+{
+  "name": "Reporte Share Moviles",
+  "short_name": "Share Moviles",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#edf2f7",
+  "theme_color": "#17324d"
+}

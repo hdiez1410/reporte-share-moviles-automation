@@ -1,0 +1,15 @@
+inputs/
+outputs/
+dist/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.dev.vars
+.wrangler/
+*.xlsb
+*.xlsx
+*.xlsm
+data_core_compressed.js
+data_rows_*.js
+loader.js
