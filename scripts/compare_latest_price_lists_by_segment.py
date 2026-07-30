@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from update_cruces_prices_from_lists import extract_prices, norm_key, parse_date_from_name
+from update_cruces_prices_from_lists import canonical_price_files, extract_prices, norm_key, parse_date_from_name
 
 
 def normalized(value) -> str:
@@ -64,10 +64,7 @@ def segment_summary(rows: list[dict]) -> list[dict]:
 
 
 def build(prices_dir: Path, cruces_path: Path, top: int) -> dict:
-    price_files = sorted(
-        (path for path in prices_dir.glob("*.xlsm") if not path.name.startswith("._")),
-        key=parse_date_from_name,
-    )
+    price_files = canonical_price_files(prices_dir)
     if len(price_files) < 2:
         raise RuntimeError("Necesito por lo menos dos listas de precios para comparar.")
 
