@@ -10,12 +10,13 @@ from datetime import datetime
 from pathlib import Path
 
 from build_compressed_web_dashboard import write_compressed_payload
-from build_web_dashboard_data import build as build_compact_payload
+from build_web_dashboard_data import build as build_compact_payload, load_supervisor_mapping
 from enrich_accessories_report_data import enrich as enrich_accessories
 from extract_accessories_dashboard_data import build as build_accessories
 from incremental_public_state import (
     PUBLIC_REPORT_URL,
     combine_payload,
+    load_dimension_maps,
     load_public_payload,
     refresh_dimensions,
 )
@@ -122,8 +123,10 @@ def main() -> int:
     del mobile_data
     previous_mobile = public_baseline("mobiles", baseline_dir)
     current_mobile = build_compact_payload(mobile_raw, price_changes)
-    refresh_dimensions(previous_mobile, cruces)
-    refresh_dimensions(current_mobile, cruces)
+    dimension_maps = load_dimension_maps(cruces)
+    supervisors = load_supervisor_mapping()
+    refresh_dimensions(previous_mobile, dimension_maps, supervisors)
+    refresh_dimensions(current_mobile, dimension_maps, supervisors)
 
     generated_at = datetime.now().isoformat(timespec="seconds")
     mobile_payload, mobile_audit = combine_payload(previous_mobile, current_mobile, period, generated_at)
@@ -137,8 +140,8 @@ def main() -> int:
     enrich_accessories(accessories_raw, accessories_enriched, [prices_dir], str(cruces))
     previous_accessories = public_baseline("accessories", baseline_dir)
     current_accessories = build_compact_payload(accessories_enriched, price_changes)
-    refresh_dimensions(previous_accessories, cruces)
-    refresh_dimensions(current_accessories, cruces)
+    refresh_dimensions(previous_accessories, dimension_maps, supervisors)
+    refresh_dimensions(current_accessories, dimension_maps, supervisors)
     accessories_payload, accessories_audit = combine_payload(
         previous_accessories,
         current_accessories,
