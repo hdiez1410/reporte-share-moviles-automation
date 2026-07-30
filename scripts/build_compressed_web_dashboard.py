@@ -22,7 +22,8 @@ def encoded_payload(value: object) -> tuple[str, int, int]:
     return base64.b64encode(compressed).decode("ascii"), len(raw), len(compressed)
 
 
-def write_compressed_dashboard(input_json: Path, price_changes_json: Path, source_dir: Path, output_dir: Path) -> dict:
+def write_compressed_payload(payload: dict, source_dir: Path, output_dir: Path) -> dict:
+    payload = dict(payload)
     output_dir.mkdir(parents=True, exist_ok=True)
     for old in [
         *output_dir.glob("data_rows_*.js"),
@@ -38,7 +39,6 @@ def write_compressed_dashboard(input_json: Path, price_changes_json: Path, sourc
     for name in ["styles.css", "app.js", "manifest.webmanifest", "sw.js"]:
         shutil.copy2(source_dir / name, output_dir / name)
 
-    payload = build(input_json, price_changes_json)
     cache_version = "".join(
         character
         for character in str(payload.get("meta", {}).get("generated_at", ""))
@@ -197,6 +197,10 @@ Configuracion recomendada en Cloudflare Pages:
         "core_compressed_mb": round(core_compressed_bytes / 1024 / 1024, 2),
         "years": year_stats,
     }
+
+
+def write_compressed_dashboard(input_json: Path, price_changes_json: Path, source_dir: Path, output_dir: Path) -> dict:
+    return write_compressed_payload(build(input_json, price_changes_json), source_dir, output_dir)
 
 
 def main() -> int:
