@@ -37,6 +37,27 @@ def parse_date_from_name(path: Path) -> date:
     return date(year, month, day)
 
 
+def canonical_price_files(prices_dir: Path) -> list[Path]:
+    selected: dict[date, Path] = {}
+    for path in prices_dir.glob("*.xlsm"):
+        if path.name.startswith("._"):
+            continue
+        effective_date = parse_date_from_name(path)
+        previous = selected.get(effective_date)
+        key = (path.stat().st_mtime, int(" (" not in path.stem), path.name.casefold())
+        if previous is None:
+            selected[effective_date] = path
+            continue
+        previous_key = (
+            previous.stat().st_mtime,
+            int(" (" not in previous.stem),
+            previous.name.casefold(),
+        )
+        if key > previous_key:
+            selected[effective_date] = path
+    return [selected[value] for value in sorted(selected)]
+
+
 def yyyymmdd(value: date) -> int:
     return value.year * 10000 + value.month * 100 + value.day
 
@@ -181,7 +202,7 @@ def main() -> int:
 
     cruces_path = Path(args.cruces)
     prices_dir = Path(args.prices_dir)
-    price_files = sorted(path for path in prices_dir.glob("*.xlsm") if not path.name.startswith("._"))
+    price_files = canonical_price_files(prices_dir)
     if not price_files:
         raise RuntimeError(f"No encontré listas .xlsm en {prices_dir}")
 
