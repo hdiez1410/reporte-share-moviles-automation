@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import gzip
+import hashlib
 import json
 import re
 import time
@@ -145,6 +146,16 @@ def load_dimension_maps(cruces_path: Path) -> dict:
         if normalized(row.get("MARCAMODELO"))
     }
     return {"regional_map": regional_map, "segmento_map": segmento_map}
+
+
+def dimension_fingerprint(dimension_maps: dict, supervisors: dict[str, str]) -> str:
+    value = {
+        "regional": sorted(dimension_maps["regional_map"].items()),
+        "segmento": sorted(dimension_maps["segmento_map"].items()),
+        "supervisor": sorted(supervisors.items()),
+    }
+    raw = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def refresh_dimensions(
