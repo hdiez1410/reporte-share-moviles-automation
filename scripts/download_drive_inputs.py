@@ -10,11 +10,13 @@ from pathlib import Path
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 
-SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+READ_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+WRITE_SCOPES = ["https://www.googleapis.com/auth/drive"]
 FOLDER_MIME = "application/vnd.google-apps.folder"
+CANONICAL_CRUCES_NAME = "CRUCES_ULTIMO.xlsx"
 TARGET_FOLDERS = {
     "bdoracle": "BD_Oracle",
     "bdoracle2": "BD_Oracle",
@@ -85,12 +87,28 @@ def select_oracle_items(items: list[dict]) -> list[dict]:
     return [selected[period] for period in sorted(selected)]
 
 
-def service():
+def select_cruces_item(items: list[dict]) -> list[dict]:
+    if not items:
+        return []
+
+    def key(item: dict) -> tuple[str, int, int, str]:
+        match = re.search(r"(20\d{6})", item["name"])
+        dated = int(match.group(1)) if match else 0
+        canonical = int(item["name"].casefold() == CANONICAL_CRUCES_NAME.casefold())
+        return (item.get("modifiedTime", ""), canonical, dated, item["name"].casefold())
+
+    return [max(items, key=key)]
+
+
+def service(write: bool = False):
     raw = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
     if not raw:
         raise RuntimeError("Falta el secret GOOGLE_SERVICE_ACCOUNT_JSON.")
     info = json.loads(raw)
-    credentials = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    credentials = service_account.Credentials.from_service_account_info(
+        info,
+        scopes=WRITE_SCOPES if write else READ_SCOPES,
+    )
     return build("drive", "v3", credentials=credentials, cache_discovery=False)
 
 
@@ -163,7 +181,7 @@ def download_file(drive, file_id: str, output: Path) -> None:
                     time.sleep(delay)
 
 
-def download_folder(drive, folder: dict, output_dir: Path, target: str) -> list[dict]:
+def download_folder(drive, folder: dict, output_dir: Path, target: str, latest_only: bool = False) -> list[dict]:
     downloaded = []
     output_dir.mkdir(parents=True, exist_ok=True)
     items = [
@@ -175,6 +193,10 @@ def download_folder(drive, folder: dict, output_dir: Path, target: str) -> list[
     ]
     if target == "BD_Oracle":
         items = select_oracle_items(items)
+        if latest_only and items:
+            items = [items[-1]]
+    elif target == "CRUCES":
+        items = select_cruces_item(items)
     for item in sorted(items, key=lambda current: current["name"].casefold()):
         if item.get("mimeType") == FOLDER_MIME or item["name"].startswith("._"):
             continue
@@ -196,11 +218,62 @@ def download_folder(drive, folder: dict, output_dir: Path, target: str) -> list[
     return downloaded
 
 
+def upload_canonical_cruces(root_folder_id: str, source: Path) -> dict:
+    if not source.exists() or source.stat().st_size == 0:
+        raise RuntimeError(f"CRUCES no existe o está vacío: {source}")
+    drive = service(write=True)
+    folders = find_source_folders(drive, root_folder_id)
+    cruces_folder = folders["CRUCES"]
+    existing = [
+        item
+        for item in list_children(drive, cruces_folder["id"])
+        if item.get("mimeType") != FOLDER_MIME
+        and item["name"].casefold() == CANONICAL_CRUCES_NAME.casefold()
+    ]
+    media = MediaFileUpload(
+        str(source),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        resumable=True,
+        chunksize=DOWNLOAD_CHUNK_SIZE,
+    )
+    fields = "id,name,modifiedTime,size,webViewLink"
+    if existing:
+        item = (
+            drive.files()
+            .update(
+                fileId=existing[0]["id"],
+                media_body=media,
+                fields=fields,
+                supportsAllDrives=True,
+            )
+            .execute()
+        )
+        action = "updated"
+    else:
+        item = (
+            drive.files()
+            .create(
+                body={"name": CANONICAL_CRUCES_NAME, "parents": [cruces_folder["id"]]},
+                media_body=media,
+                fields=fields,
+                supportsAllDrives=True,
+            )
+            .execute()
+        )
+        action = "created"
+    return {"action": action, "folder_id": cruces_folder["id"], **item}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Descarga las fuentes del reporte desde Google Drive.")
     parser.add_argument("--root-folder-id", default=os.environ.get("DRIVE_ROOT_FOLDER_ID"))
     parser.add_argument("--output-dir", default="inputs")
     parser.add_argument("--manifest", default="inputs/drive_manifest.json")
+    parser.add_argument(
+        "--latest-only",
+        action="store_true",
+        help="Descarga solo la BD Oracle más reciente, el CRUCES canónico y todas las listas de precios.",
+    )
     args = parser.parse_args()
     if not args.root_folder_id:
         raise RuntimeError("Falta DRIVE_ROOT_FOLDER_ID.")
@@ -210,7 +283,13 @@ def main() -> int:
     folders = find_source_folders(drive, args.root_folder_id)
     manifest = {}
     for target, folder in sorted(folders.items()):
-        manifest[target] = download_folder(drive, folder, output_dir / target, target)
+        manifest[target] = download_folder(
+            drive,
+            folder,
+            output_dir / target,
+            target,
+            latest_only=args.latest_only,
+        )
 
     manifest_path = Path(args.manifest)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
