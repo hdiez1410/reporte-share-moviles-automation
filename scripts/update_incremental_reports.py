@@ -157,16 +157,28 @@ def main() -> int:
         cruces_upload = {"name": "CRUCES_ULTIMO.xlsx", "id": "local-validation"}
         upload_path.write_text(json.dumps(cruces_upload), encoding="utf-8")
     else:
-        run(
-            [
-                sys.executable,
-                "scripts/upload_canonical_cruces.py",
-                str(cruces),
-                "--output",
-                str(upload_path),
-            ]
-        )
-        cruces_upload = json.loads(upload_path.read_text(encoding="utf-8"))
+        try:
+            run(
+                [
+                    sys.executable,
+                    "scripts/upload_canonical_cruces.py",
+                    str(cruces),
+                    "--output",
+                    str(upload_path),
+                ]
+            )
+            cruces_upload = json.loads(upload_path.read_text(encoding="utf-8"))
+        except subprocess.CalledProcessError as error:
+            manifest_path = inputs / "drive_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+            source_item = next(iter(manifest.get("CRUCES", [])), {})
+            cruces_upload = {
+                "name": source_item.get("name", "CRUCES_ULTIMO.xlsx"),
+                "id": source_item.get("id", "drive-read-only"),
+                "warning": f"No se pudo sobrescribir CRUCES en Drive: {error}",
+            }
+            upload_path.write_text(json.dumps(cruces_upload, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(json.dumps({"warning": "cruces_drive_read_only", **cruces_upload}, ensure_ascii=False), flush=True)
     prices = json.loads(price_changes.read_text(encoding="utf-8"))
     request_id = os.environ.get("REPORT_REQUEST_ID") or os.environ.get("GITHUB_RUN_ID") or generated_at
     status = {
