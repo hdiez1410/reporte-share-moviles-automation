@@ -17,6 +17,7 @@ from extract_accessories_dashboard_data import build as build_accessories
 from incremental_public_state import (
     PUBLIC_REPORT_URL,
     combine_payload,
+    dimension_fingerprint,
     load_dimension_maps,
     load_public_payload,
     refresh_dimensions,
@@ -136,12 +137,20 @@ def main() -> int:
     current_mobile = build_compact_payload(mobile_raw, price_changes)
     dimension_maps = load_dimension_maps(cruces)
     supervisors = load_supervisor_mapping()
-    refresh_dimensions(previous_mobile, dimension_maps, supervisors)
+    dimension_hash = dimension_fingerprint(dimension_maps, supervisors)
+    bootstrap_path = ROOT / "scripts" / "public_dimension_hash.txt"
+    bootstrap_hash = bootstrap_path.read_text(encoding="utf-8").strip() if bootstrap_path.exists() else ""
+    previous_hash = previous_mobile.get("meta", {}).get("dimension_hash") or bootstrap_hash
+    if previous_hash != dimension_hash:
+        refresh_dimensions(previous_mobile, dimension_maps, supervisors)
+    else:
+        print(json.dumps({"stage": "mobile_dimensions_unchanged"}), flush=True)
     refresh_dimensions(current_mobile, dimension_maps, supervisors)
     started = stage("mobile_load_and_dimensions", started)
 
     generated_at = datetime.now().isoformat(timespec="seconds")
     mobile_payload, mobile_audit = combine_payload(previous_mobile, current_mobile, period, generated_at)
+    mobile_payload.setdefault("meta", {})["dimension_hash"] = dimension_hash
     mobile_build = write_compressed_payload(mobile_payload, ROOT, dist)
     del previous_mobile, current_mobile, mobile_payload
     gc.collect()
@@ -154,7 +163,11 @@ def main() -> int:
     started = stage("accessories_extract_and_enrich", started)
     previous_accessories = public_baseline("accessories", baseline_dir)
     current_accessories = build_compact_payload(accessories_enriched, price_changes)
-    refresh_dimensions(previous_accessories, dimension_maps, supervisors)
+    previous_accessories_hash = previous_accessories.get("meta", {}).get("dimension_hash") or bootstrap_hash
+    if previous_accessories_hash != dimension_hash:
+        refresh_dimensions(previous_accessories, dimension_maps, supervisors)
+    else:
+        print(json.dumps({"stage": "accessories_dimensions_unchanged"}), flush=True)
     refresh_dimensions(current_accessories, dimension_maps, supervisors)
     started = stage("accessories_load_and_dimensions", started)
     accessories_payload, accessories_audit = combine_payload(
@@ -163,6 +176,7 @@ def main() -> int:
         period,
         generated_at,
     )
+    accessories_payload.setdefault("meta", {})["dimension_hash"] = dimension_hash
     accessories_build = write_compressed_payload(accessories_payload, ROOT / "accesorios", dist / "accesorios")
     del previous_accessories, current_accessories, accessories_payload
     gc.collect()
@@ -214,6 +228,7 @@ def main() -> int:
         "latest_price_date": prices.get("latest_date"),
         "cruces_name": cruces_upload.get("name"),
         "cruces_file_id": cruces_upload.get("id"),
+        "dimension_hash": dimension_hash,
     }
     for target in [dist / "status.json", dist / "accesorios" / "status.json"]:
         target.write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
