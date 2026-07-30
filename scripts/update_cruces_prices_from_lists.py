@@ -39,7 +39,9 @@ def parse_date_from_name(path: Path) -> date:
 
 def canonical_price_files(prices_dir: Path) -> list[Path]:
     selected: dict[date, Path] = {}
-    for path in prices_dir.glob("*.xlsm"):
+    for path in prices_dir.iterdir():
+        if not path.is_file() or path.suffix.lower() not in {".xlsm", ".xlsx"}:
+            continue
         if path.name.startswith("._"):
             continue
         effective_date = parse_date_from_name(path)
@@ -198,13 +200,25 @@ def main() -> int:
     parser.add_argument("--output", required=True)
     parser.add_argument("--audit", required=True)
     parser.add_argument("--latest-end", help="Fecha final yyyy-mm-dd para la lista mas reciente.")
+    parser.add_argument(
+        "--lookback-days",
+        type=int,
+        default=14,
+        help="Reprocesa esta ventana de listas y conserva intacto el historial anterior.",
+    )
     args = parser.parse_args()
 
     cruces_path = Path(args.cruces)
     prices_dir = Path(args.prices_dir)
     price_files = canonical_price_files(prices_dir)
     if not price_files:
-        raise RuntimeError(f"No encontré listas .xlsm en {prices_dir}")
+        raise RuntimeError(f"No encontré listas de precios en {prices_dir}")
+
+    latest_list_date = parse_date_from_name(price_files[-1])
+    replacement_from = latest_list_date - timedelta(days=max(args.lookback_days, 0))
+    recent_files = [path for path in price_files if parse_date_from_name(path) >= replacement_from]
+    if not recent_files:
+        recent_files = [price_files[-1]]
 
     old_prices = pd.read_excel(cruces_path, sheet_name="Precios")
     old_prices["FECHAFINALCOM"] = pd.to_numeric(old_prices["FECHAFINALCOM"], errors="coerce").astype("Int64")
@@ -212,9 +226,9 @@ def main() -> int:
     max_existing_date = datetime.strptime(str(max_existing_key), "%Y%m%d").date()
 
     latest_end = datetime.strptime(args.latest_end, "%Y-%m-%d").date() if args.latest_end else None
-    ranges = build_effective_ranges(price_files, max_existing_date, latest_end)
+    ranges = build_effective_ranges(recent_files, max_existing_date, latest_end)
     first_replacement_key = yyyymmdd(ranges[0]["start"])
-    extractions = {path.name: extract_prices(path) for path in price_files}
+    extractions = {path.name: extract_prices(path) for path in recent_files}
     new_rows = prices_rows_for_ranges(extractions, ranges)
     new_prices = pd.DataFrame(new_rows, columns=["Fecha", "FECHAFINALCOM", "Week", "MARCAMODELO", "PRECIO", "MODELOFECHAFINAL"])
 
@@ -238,6 +252,9 @@ def main() -> int:
         "target_sheet": TARGET_SHEET,
         "target_column": "G",
         "target_plan": TARGET_HEADER,
+        "lookback_days": args.lookback_days,
+        "available_price_files": len(price_files),
+        "processed_price_files": len(recent_files),
         "effective_ranges": [
             {
                 "file": item["path"].name,
