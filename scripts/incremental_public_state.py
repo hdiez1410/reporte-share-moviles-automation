@@ -10,8 +10,10 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
+
 from build_web_dashboard_data import load_supervisor_mapping, supervisor_for_pdv
-from extract_sales_report_data import MONTH_ABBR, load_crosses, norm_key
+from extract_sales_report_data import MONTH_ABBR, norm_key, normalized
 from extract_sales_report_data_multi import month_label, week_from_date_unique
 
 
@@ -122,17 +124,42 @@ def weighted_model_prices(rows: list[dict]) -> dict[str, float]:
     return {model: amounts[model] / units[model] for model in sorted(units) if units[model]}
 
 
-def refresh_dimensions(payload: dict, cruces_path: Path) -> None:
-    crosses = load_crosses(cruces_path)
-    supervisors = load_supervisor_mapping()
+def load_dimension_maps(cruces_path: Path) -> dict:
+    regional_df = pd.read_excel(cruces_path, sheet_name="REGIONAL")
+    regional_map = {
+        norm_key(row["PDV"]): normalized(row["Regional Honor"]) or "Sin regional"
+        for _, row in regional_df.iterrows()
+        if normalized(row.get("PDV"))
+    }
+    try:
+        from add_regional_overrides import REGIONAL_OVERRIDES
+
+        for pdv, regional in REGIONAL_OVERRIDES.items():
+            regional_map[norm_key(pdv)] = regional
+    except ImportError:
+        pass
+    segmento_df = pd.read_excel(cruces_path, sheet_name="Segmento")
+    segmento_map = {
+        norm_key(row["MARCAMODELO"]): normalized(row["Segmento"]) or "Sin segmento Honor"
+        for _, row in segmento_df.iterrows()
+        if normalized(row.get("MARCAMODELO"))
+    }
+    return {"regional_map": regional_map, "segmento_map": segmento_map}
+
+
+def refresh_dimensions(
+    payload: dict,
+    dimension_maps: dict,
+    supervisors: dict[str, str],
+) -> None:
     accessories = payload.get("meta", {}).get("report_kind") == "accessories"
     for row in [*payload.get("rows", []), *payload.get("stockRows", [])]:
         pdv = str(row.get("p") or "Sin punto de venta")
         model = str(row.get("m") or "Sin modelo")
-        row["rg"] = crosses["regional_map"].get(norm_key(pdv), "Sin regional")
+        row["rg"] = dimension_maps["regional_map"].get(norm_key(pdv), "Sin regional")
         row["sup"] = supervisor_for_pdv(pdv, supervisors)
         if not accessories:
-            row["s"] = crosses["segmento_map"].get(norm_key(model), "Sin segmento Honor")
+            row["s"] = dimension_maps["segmento_map"].get(norm_key(model), "Sin segmento Honor")
 
 
 def cross_summary(rows: list[dict], accessories: bool) -> dict:
