@@ -54,6 +54,7 @@ jobs:
 
       - name: Actualizar, publicar y verificar (intento 1)
         id: first_attempt
+        timeout-minutes: 45
         continue-on-error: true
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
@@ -78,6 +79,7 @@ jobs:
       - name: Actualizar, publicar y verificar (intento 2)
         id: second_attempt
         if: steps.first_attempt.outcome == 'failure'
+        timeout-minutes: 45
         continue-on-error: true
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
