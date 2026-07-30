@@ -179,7 +179,11 @@ def collect_price_files(paths: list[Path]) -> list[Path]:
     candidates = []
     for path in paths:
         if path.is_dir():
-            candidates.extend(path.glob("*.xlsm"))
+            candidates.extend(
+                item
+                for item in path.iterdir()
+                if item.is_file() and item.suffix.lower() in {".xlsm", ".xlsx"}
+            )
         elif path.exists():
             candidates.append(path)
     by_date: dict[date, Path] = {}
@@ -194,6 +198,20 @@ def collect_price_files(paths: list[Path]) -> list[Path]:
         if current is None or path.stat().st_mtime >= current.stat().st_mtime:
             by_date[list_date] = path
     return [by_date[key] for key in sorted(by_date)]
+
+
+def price_files_for_rows(price_files: list[Path], rows: list[dict]) -> list[Path]:
+    row_dates = [parse_iso_date(row.get("FECHA")) for row in rows]
+    row_dates = [value for value in row_dates if value is not None]
+    if not row_dates or not price_files:
+        return price_files
+    first_sale_date = min(row_dates)
+    dated = [(parse_date_from_name(path), path) for path in price_files]
+    before = [item for item in dated if item[0] <= first_sale_date]
+    selected = [path for value, path in dated if value >= first_sale_date]
+    if before:
+        selected.insert(0, max(before, key=lambda item: item[0])[1])
+    return list(dict.fromkeys(selected))
 
 
 def build_price_catalog(price_files: list[Path]) -> dict:
@@ -373,7 +391,10 @@ def enrich(input_path: Path, output_path: Path, price_paths: list[Path], cruces:
         apply_category_rules(row, changes)
         apply_regional_overrides(row, changes)
 
-    price_files = collect_price_files(price_paths)
+    price_files = price_files_for_rows(
+        collect_price_files(price_paths),
+        data.get("dashboard_data", []),
+    )
     catalog = build_price_catalog(price_files)
     changes.update(apply_prices(data.get("dashboard_data", []), catalog))
 
