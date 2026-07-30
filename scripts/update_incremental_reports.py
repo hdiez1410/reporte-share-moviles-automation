@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -68,6 +69,12 @@ def write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
 
+def stage(name: str, started: float) -> float:
+    now = time.monotonic()
+    print(json.dumps({"stage": name, "seconds": round(now - started, 2)}), flush=True)
+    return now
+
+
 def public_baseline(report: str, baseline_dir: Path | None) -> dict:
     if baseline_dir:
         source = baseline_dir if report == "mobiles" else baseline_dir / "accesorios"
@@ -100,9 +107,11 @@ def main() -> int:
 
     clean_dir(outputs)
     clean_dir(dist)
+    started = time.monotonic()
 
     cruces = refresh_cruces_prices(cruces_source(inputs / "CRUCES"), prices_dir, outputs, oracle)
     cruces = apply_segmento_overrides(cruces, outputs)
+    started = stage("cruces_and_prices", started)
     price_changes = outputs / "price_changes_segment.json"
     run(
         [
@@ -116,32 +125,38 @@ def main() -> int:
             str(price_changes),
         ]
     )
+    started = stage("price_comparison", started)
 
     mobile_raw = outputs / "current_mobile.json"
     mobile_data = process_source_file(oracle, cruces)["data"]
     write_json(mobile_raw, mobile_data)
     del mobile_data
+    started = stage("mobile_extract", started)
     previous_mobile = public_baseline("mobiles", baseline_dir)
     current_mobile = build_compact_payload(mobile_raw, price_changes)
     dimension_maps = load_dimension_maps(cruces)
     supervisors = load_supervisor_mapping()
     refresh_dimensions(previous_mobile, dimension_maps, supervisors)
     refresh_dimensions(current_mobile, dimension_maps, supervisors)
+    started = stage("mobile_load_and_dimensions", started)
 
     generated_at = datetime.now().isoformat(timespec="seconds")
     mobile_payload, mobile_audit = combine_payload(previous_mobile, current_mobile, period, generated_at)
     mobile_build = write_compressed_payload(mobile_payload, ROOT, dist)
     del previous_mobile, current_mobile, mobile_payload
     gc.collect()
+    started = stage("mobile_combine_and_write", started)
 
     accessories_raw = outputs / "current_accessories_raw.json"
     accessories_enriched = outputs / "current_accessories.json"
     write_json(accessories_raw, build_accessories([(period, oracle)], [(period, oracle)], cruces))
     enrich_accessories(accessories_raw, accessories_enriched, [prices_dir], str(cruces))
+    started = stage("accessories_extract_and_enrich", started)
     previous_accessories = public_baseline("accessories", baseline_dir)
     current_accessories = build_compact_payload(accessories_enriched, price_changes)
     refresh_dimensions(previous_accessories, dimension_maps, supervisors)
     refresh_dimensions(current_accessories, dimension_maps, supervisors)
+    started = stage("accessories_load_and_dimensions", started)
     accessories_payload, accessories_audit = combine_payload(
         previous_accessories,
         current_accessories,
@@ -151,6 +166,7 @@ def main() -> int:
     accessories_build = write_compressed_payload(accessories_payload, ROOT / "accesorios", dist / "accesorios")
     del previous_accessories, current_accessories, accessories_payload
     gc.collect()
+    started = stage("accessories_combine_and_write", started)
 
     upload_path = outputs / "cruces_drive_upload.json"
     if args.skip_drive_upload:
